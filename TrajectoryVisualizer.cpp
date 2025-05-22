@@ -22,80 +22,6 @@ TrajectoryVisualizer::TrajectoryVisualizer(unsigned int width, unsigned int heig
     setupInfoText();
 }
 
-void TrajectoryVisualizer::setData(const WorldTrajectoryData& data) {
-    m_worldTrajectoryData = data;
-    resetViewAndAnimation();
-    // recalculateScreenTrajectory(); // Вызывается внутри resetViewAndAnimation
-}
-
-bool TrajectoryVisualizer::loadDataFromFile(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "TrajectoryVisualizer: Ошибка: не удалось открыть файл траектории " << filename << "\n";
-        return false;
-    }
-    WorldTrajectoryData data;
-    std::string line;
-    while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        double x, y;
-        if (iss >> x >> y) {
-            data.emplace_back(x, y);
-        }
-        else {
-            std::cerr << "TrajectoryVisualizer: Предупреждение: неверный формат строки в файле: " << line << "\n";
-        }
-    }
-    file.close(); // Закрываем файл
-    if (data.empty()) {
-        std::cerr << "TrajectoryVisualizer: Ошибка: файл " << filename << " пуст или не содержит корректных данных.\n";
-        return false;
-    }
-    setData(data);
-    return true;
-}
-
-void TrajectoryVisualizer::run() {
-    if (m_worldTrajectoryData.empty()) {
-        std::cerr << "TrajectoryVisualizer: Нет данных для визуализации. Загрузите данные.\n";
-        // Можно просто показать пустое окно с сообщением
-        bool dataNotLoaded = true;
-        while (m_window.isOpen() && dataNotLoaded) {
-            sf::Event event{};
-            while (m_window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) m_window.close();
-                if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) m_window.close();
-            }
-            updateInfoText(); // Обновит текст, который может содержать сообщение об ошибке
-            m_window.clear(sf::Color::Black);
-            m_window.draw(m_infoText); // Показать инфо-текст (можно изменить его содержимое)
-            m_window.display();
-            if (!m_worldTrajectoryData.empty()) dataNotLoaded = false; // Если данные загрузились в другом потоке/способом
-        }
-        if (!m_window.isOpen()) return; // Если окно было закрыто
-    }
-
-    while (m_window.isOpen()) {
-        sf::Event event{};
-        while (m_window.pollEvent(event)) {
-            handleEvent(event);
-        }
-        updateAnimation();
-        updateInfoText();
-        draw();
-    }
-}
-
-void TrajectoryVisualizer::resetViewAndAnimation() {
-    m_scale = DEFAULT_SCALE;
-    m_offset = { 0.f, 0.f };
-    m_isPaused = false;
-    m_showAllPointsImmediately = false;
-    m_pointsPerFrame = DEFAULT_POINTS_PER_FRAME;
-    m_currentPointIndex = m_worldTrajectoryData.empty() ? 0 : 1;
-    recalculateScreenTrajectory();
-}
-
 sf::Vector2f TrajectoryVisualizer::toScreenCoords(double worldX, double worldY) const {
     return {
         m_screenCenter.x + m_offset.x + static_cast<float>(worldX) * m_scale,
@@ -265,4 +191,78 @@ void TrajectoryVisualizer::draw() {
 
     m_window.draw(m_infoText);
     m_window.display();
+}
+
+void TrajectoryVisualizer::setData(const WorldTrajectoryData& data) {
+    m_worldTrajectoryData = data;
+    resetViewAndAnimation();
+    // recalculateScreenTrajectory(); // Вызывается внутри resetViewAndAnimation
+}
+
+bool TrajectoryVisualizer::loadDataFromFile(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "TrajectoryVisualizer: Ошибка: не удалось открыть файл траектории " << filename << "\n";
+        return false;
+    }
+    WorldTrajectoryData data;
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        double x, y;
+        if (iss >> x >> y) {
+            data.emplace_back(x, y);
+        }
+        else {
+            std::cerr << "TrajectoryVisualizer: Предупреждение: неверный формат строки в файле: " << line << "\n";
+        }
+    }
+    file.close(); // Закрываем файл
+    if (data.empty()) {
+        std::cerr << "TrajectoryVisualizer: Ошибка: файл " << filename << " пуст или не содержит корректных данных.\n";
+        return false;
+    }
+    setData(data);
+    return true;
+}
+
+void TrajectoryVisualizer::resetViewAndAnimation() {
+    m_scale = DEFAULT_SCALE;
+    m_offset = { 0.f, 0.f };
+    m_isPaused = false;
+    m_showAllPointsImmediately = false;
+    m_pointsPerFrame = DEFAULT_POINTS_PER_FRAME;
+    m_currentPointIndex = m_worldTrajectoryData.empty() ? 0 : 1;
+    recalculateScreenTrajectory();
+}
+
+void TrajectoryVisualizer::run() {
+    if (m_worldTrajectoryData.empty()) {
+        std::cerr << "TrajectoryVisualizer: Нет данных для визуализации. Загрузите данные.\n";
+        // Можно просто показать пустое окно с сообщением
+        bool dataNotLoaded = true;
+        while (m_window.isOpen() && dataNotLoaded) {
+            sf::Event event{};
+            while (m_window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) m_window.close();
+                if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) m_window.close();
+            }
+            updateInfoText(); // Обновит текст, который может содержать сообщение об ошибке
+            m_window.clear(sf::Color::Black);
+            m_window.draw(m_infoText); // Показать инфо-текст (можно изменить его содержимое)
+            m_window.display();
+            if (!m_worldTrajectoryData.empty()) dataNotLoaded = false; // Если данные загрузились в другом потоке/способом
+        }
+        if (!m_window.isOpen()) return; // Если окно было закрыто
+    }
+
+    while (m_window.isOpen()) {
+        sf::Event event{};
+        while (m_window.pollEvent(event)) {
+            handleEvent(event);
+        }
+        updateAnimation();
+        updateInfoText();
+        draw();
+    }
 }
